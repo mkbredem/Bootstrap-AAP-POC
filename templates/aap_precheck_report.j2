@@ -1,3 +1,7 @@
+{% set PASS = "✔" %}
+{% set FAIL = "❌" %}
+{% set WARN = "⚠" %}
+
 ============================================================
 🔍 AAP 2.6 Containerized Growth Precheck Report
 ============================================================
@@ -12,31 +16,31 @@ OS:          {{ ansible_distribution }} {{ ansible_distribution_version }}
 Results:
 ------------------------------------------------------------
 {% for r in precheck_results %}
-{{ "✔" if r.status == "PASS" else "✖" if r.status == "FAIL" else "⚠" }} {{ "%-22s" | format(r.requirement) }} : {{ r.observed }}
+{{ (PASS if r.status == "PASS" else FAIL if r.status == "FAIL" else WARN) }} {{ "%-24s"|format(r.requirement) }} : {{ r.observed }}
 {% if r.status != "PASS" %}
-→ Remediation:
+  → Remediation:
 {% if r.requirement == "Execution user" %}
-  Run playbook as a non-root user created for AAP installation.
+    Run playbook as a non-root user created for AAP installation.
 {% elif r.requirement == "Privilege escalation" %}
-  Ensure user has passwordless sudo (edit /etc/sudoers).
+    Ensure user has passwordless sudo (edit /etc/sudoers).
 {% elif r.requirement == "Operating system" %}
-  Upgrade to supported RHEL version (>= {{ min_rhel_version }}).
+    Upgrade to supported RHEL version (>= {{ min_rhel_version }}).
 {% elif r.requirement == "CPU" %}
-  Increase vCPU count to at least {{ min_cpu }}.
+    Increase vCPU count to at least {{ min_cpu }}.
 {% elif r.requirement == "Memory" %}
-  Increase memory to at least 16GB (32GB recommended for seeding).
+    Increase memory to at least 16GB (32GB recommended for seeding).
 {% elif r.requirement == "Total disk" %}
-  Increase disk to >= 60GB AND expand OS filesystem:
-    sudo growpart /dev/xvda 3
-    sudo xfs_growfs /
+    Increase disk to >= 60GB AND expand OS filesystem:
+      sudo growpart /dev/xvda 3
+      sudo xfs_growfs /
 {% elif r.requirement is search("Install dir") %}
-  Ensure home filesystem (~/) has >= 15GB free space.
+    Ensure home filesystem (~/) has >= 15GB free space.
 {% elif r.requirement == "Podman" %}
-  Install podman: sudo dnf install -y podman
+    Install podman: sudo dnf install -y podman
 {% elif r.requirement == "ansible-core" %}
-  Install ansible-core: sudo dnf install -y ansible-core
+    Install ansible-core: sudo dnf install -y ansible-core
 {% else %}
-  Review system configuration to meet requirement.
+    Review system configuration to meet requirement.
 {% endif %}
 {% endif %}
 
@@ -44,7 +48,7 @@ Results:
 ------------------------------------------------------------
 Summary:
 ✔ PASS: {{ precheck_results | selectattr('status','equalto','PASS') | list | length }}
-✖ FAIL: {{ precheck_results | selectattr('status','equalto','FAIL') | list | length }}
+❌ FAIL: {{ precheck_results | selectattr('status','equalto','FAIL') | list | length }}
 ⚠ WARN: {{ precheck_results | selectattr('status','equalto','WARN') | list | length }}
 ============================================================
 
