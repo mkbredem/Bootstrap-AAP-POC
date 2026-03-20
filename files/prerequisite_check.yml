@@ -149,8 +149,8 @@
         result:
           requirement: "/var/tmp space"
           desired: ">= 3GB free"
-          observed: "{{ (vartmp_stat.stat.avail | default(0) / 1024 / 1024 / 1024) | round(2) }} GB"
-          status: "{{ 'PASS' if vartmp_stat.stat.avail | int >= min_vartmp_bytes else 'FAIL' }}"
+          observed: "{{ (total_disk_bytes | int / 1024 / 1024 / 1024) | round(2) }} GB"
+          status: "{{ 'PASS' if (total_disk_bytes | int) >= min_disk_bytes else 'FAIL' }}"
 
     ############################################################
     # TMP DIR CHECK
