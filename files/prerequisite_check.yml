@@ -245,3 +245,6 @@
           {% else %}
           ✅ SYSTEM READY FOR AAP INSTALLATION
           {% endif %}
+
+    - debug:
+        msg: "{{ final_report.split('\n') }}"
