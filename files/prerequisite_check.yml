@@ -252,3 +252,7 @@
     - name: Print report cleanly
       debug:
         var: final_report
+
+    - name: Print report like CLI (fixed)
+      ansible.builtin.shell: |
+        printf "%b\n" "{{ final_report }}"
