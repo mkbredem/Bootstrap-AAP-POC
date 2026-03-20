@@ -124,15 +124,28 @@
         path: "{{ install_dir }}"
       register: install_stat
 
+    - name: Find mount for home directory
+      set_fact:
+        home_mount: >-
+          {{
+            ansible_mounts
+            | sort(attribute='mount', reverse=True)
+            | selectattr('mount', 'in', [ansible_env.HOME] + 
+                (ansible_env.HOME.split('/') | map('regex_replace', '^(.*)$', '/\\1') | list))
+            | list
+            | first
+          }}
+
     - name: Record install dir check
       set_fact:
         precheck_results: "{{ precheck_results + [ result ] }}"
       vars:
+        install_bytes: "{{ home_mount.size_available | default(0) | int }}"
         result:
           requirement: "Install dir space"
           desired: ">= 15GB free"
-          observed: "{{ (install_stat.stat.avail | default(0) / 1024 / 1024 / 1024) | round(2) }} GB"
-          status: "{{ 'PASS' if install_stat.stat.avail | int >= min_install_bytes else 'FAIL' }}"
+          observed: "{{ (install_bytes / 1024 / 1024 / 1024) | round(2) }} GB"
+          status: "{{ 'PASS' if install_bytes >= min_install_bytes else 'FAIL' }}"
 
     ############################################################
     # /var/tmp CHECK
