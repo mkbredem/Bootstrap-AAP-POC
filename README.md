@@ -20,7 +20,10 @@
     - [**AAP 2.6 Containerized Setup Bundle - RHEL9**](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---10/2.6/x86_64/product-software)
 
 4. Update `secrets.yml` in this directory with the desirec password (this will be encrypted upon installation with the password you provide)
-5. Run the playbook
+5. Run `prerquisite_check.yml` playbook
+    <pre>
+    ansible-playbook -i inventory.ini aap_precheck.yml</pre>
+
 
 ## Playbook Does
 1. Extract installer on your RHEL9 or RHEL10 AAP Host
