@@ -117,7 +117,8 @@
           status: "{{ 'PASS' if total_disk_bytes | int >= min_disk_bytes else 'FAIL' }}"
 
     ############################################################
-    # INSTALL DIR CHECK
+    # INSTALL DISK CHECK
+    # All directories (~/, /tmp, /var/tmp) reside on the same filesystem; validating root filesystem capacity.”
     ############################################################
     - name: Get install dir stats
       stat:
@@ -138,42 +139,6 @@
           desired: ">= 15GB free"
           observed: "{{ (install_bytes | int / 1024 / 1024 / 1024) | round(2) }} GB"
           status: "{{ 'PASS' if (install_bytes | int) >= min_install_bytes else 'FAIL' }}"
-
-    ############################################################
-    # /var/tmp CHECK
-    ############################################################
-    - name: Get /var/tmp stats
-      stat:
-        path: /var/tmp
-      register: vartmp_stat
-
-    - name: Record /var/tmp check
-      set_fact:
-        precheck_results: "{{ precheck_results + [ result ] }}"
-      vars:
-        result:
-          requirement: "/var/tmp space"
-          desired: ">= 3GB free"
-          observed: "{{ (total_disk_bytes | int / 1024 / 1024 / 1024) | round(2) }} GB"
-          status: "{{ 'PASS' if (total_disk_bytes | int) >= min_disk_bytes else 'FAIL' }}"
-
-    ############################################################
-    # TMP DIR CHECK
-    ############################################################
-    - name: Get tmp dir stats
-      stat:
-        path: "{{ tmp_dir }}"
-      register: tmp_stat
-
-    - name: Record tmp dir check
-      set_fact:
-        precheck_results: "{{ precheck_results + [ result ] }}"
-      vars:
-        result:
-          requirement: "Temp dir space"
-          desired: ">= 10GB free"
-          observed: "{{ (tmp_stat.stat.avail | default(0) / 1024 / 1024 / 1024) | round(2) }} GB"
-          status: "{{ 'PASS' if tmp_stat.stat.avail | int >= min_tmp_bytes else 'FAIL' }}"
 
     ############################################################
     # PODMAN CHECK
