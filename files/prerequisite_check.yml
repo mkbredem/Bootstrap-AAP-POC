@@ -136,8 +136,8 @@
         result:
           requirement: "Install dir space (~/) "
           desired: ">= 15GB free"
-          observed: "{{ (install_bytes / 1024 / 1024 / 1024) | round(2) }} GB"
-          status: "{{ 'PASS' if install_bytes >= min_install_bytes else 'FAIL' }}"
+          observed: "{{ (install_bytes | int / 1024 / 1024 / 1024) | round(2) }} GB"
+          status: "{{ 'PASS' if (install_bytes | int) >= min_install_bytes else 'FAIL' }}"
 
     ############################################################
     # /var/tmp CHECK
