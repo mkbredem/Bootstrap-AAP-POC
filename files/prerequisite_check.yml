@@ -181,59 +181,10 @@
     ############################################################
     # FINAL REPORT (BUILD)
     ############################################################
-    - name: Build final report
-      set_fact:
-        final_report: >-
-          ============================================================
-          🔍 AAP 2.6 Containerized Growth Precheck Report
-          ============================================================
-
-          System Summary:
-          ------------------------------------------------------------
-          Host:        {{ inventory_hostname }}
-          User:        {{ ansible_user_id }}
-          OS:          {{ ansible_distribution }} {{ ansible_distribution_version }}
-          ------------------------------------------------------------
-
-          Results:
-          ------------------------------------------------------------
-          {% for r in precheck_results %}
-          {{ "✔" if r.status == "PASS" else "✖" if r.status == "FAIL" else "⚠" }} {{ "%-22s" | format(r.requirement) }} : {{ r.observed }}
-          {% if r.status != "PASS" %}
-          → Remediation:
-          {% if r.requirement == "Memory" %}
-            Increase memory to at least 16GB (32GB recommended for seeding).
-          {% else %}
-            Review system configuration to meet requirement.
-          {% endif %}
-          {% endif %}
-          {% endfor %}
-
-          ------------------------------------------------------------
-          Summary:
-          ✔ PASS: {{ precheck_results | selectattr('status','equalto','PASS') | list | length }}
-          ✖ FAIL: {{ precheck_results | selectattr('status','equalto','FAIL') | list | length }}
-          ⚠ WARN: {{ precheck_results | selectattr('status','equalto','WARN') | list | length }}
-          ============================================================
-
-          {% if (precheck_results | selectattr('status','equalto','FAIL') | list | length) > 0 %}
-          ❌ SYSTEM NOT READY FOR INSTALL
-          {% else %}
-          ✅ SYSTEM READY FOR AAP INSTALLATION
-          {% endif %}
-
-    - name: Write report to file
-      copy:
+    - name: Generate precheck report from template
+      template:
+        src: aap_precheck_report.j2
         dest: /tmp/aap_precheck_report.txt
-        content: "{{ final_report }}"
 
     - name: Display report
-      ansible.builtin.command: cat /tmp/aap_precheck_report.txt
-      register: report_output
-
-    - name: Print report to screen
-      debug:
-        msg: "{{ report_output.stdout }}"
-
-    - name: Display report (clean CLI output)
-      ansible.builtin.shell: cat /tmp/aap_precheck_report.txt
+      shell: cat /tmp/aap_precheck_report.txt
