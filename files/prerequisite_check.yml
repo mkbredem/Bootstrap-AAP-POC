@@ -249,8 +249,6 @@
     ############################################################
     # FINAL REPORT (PRINT CLEANLY)
     ############################################################
-    - name: Print report like a real CLI tool
-      ansible.builtin.shell: |
-        cat << 'EOF'
-        {{ final_report }}
-        EOF
+    - name: Print report cleanly
+      debug:
+        var: final_report
