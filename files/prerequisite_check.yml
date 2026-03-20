@@ -113,7 +113,7 @@
         result:
           requirement: "Total disk"
           desired: ">= 60GB available"
-          observed: "{{ (total_disk_bytes / 1024 / 1024 / 1024) | round(2) }} GB"
+          observed: "{{ (total_disk_bytes | int / 1024 / 1024 / 1024) | round(2) }} GB"
           status: "{{ 'PASS' if total_disk_bytes | int >= min_disk_bytes else 'FAIL' }}"
 
     ############################################################
