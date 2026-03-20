@@ -183,7 +183,7 @@
     ############################################################
     - name: Generate precheck report from template
       template:
-        src: aap_precheck_report.j2
+        src: templates/aap_precheck_report.j2
         dest: /tmp/aap_precheck_report.txt
 
     - name: Display report
