@@ -1,0 +1,227 @@
+---
+- name: AAP 2.6 Containerized Growth Topology (Bundled) Precheck
+  hosts: all
+  gather_facts: yes
+
+  vars:
+    min_rhel_version: "9.4"
+    min_cpu: 4
+    min_mem_mb: 16384
+    min_mem_seed_mb: 32768
+    min_disk_bytes: 64424509440        # 60 GB
+    min_install_bytes: 16106127360     # 15 GB
+    min_vartmp_bytes: 3221225472       # 3 GB
+    min_tmp_bytes: 10737418240         # 10 GB
+
+    install_dir: "{{ lookup('env','PWD') }}"
+    tmp_dir: "{{ lookup('env','TMPDIR') | default('/tmp', true) }}"
+
+  tasks:
+
+    - name: Initialize results list
+      set_fact:
+        precheck_results: []
+
+    ############################################################
+    # USER CHECK
+    ############################################################
+    - name: Check non-root user
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Execution user"
+          desired: "Must be non-root dedicated install user"
+          observed: "User={{ ansible_user_id }}, UID={{ ansible_user_uid }}"
+          status: "{{ 'PASS' if ansible_user_uid != 0 else 'FAIL' }}"
+
+    ############################################################
+    # SUDO CHECK
+    ############################################################
+    - name: Check sudo availability
+      command: sudo -n true
+      register: sudo_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Record sudo result
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Privilege escalation"
+          desired: "User should have sudo access"
+          observed: "{{ 'passwordless sudo works' if sudo_check.rc == 0 else 'sudo requires password or unavailable' }}"
+          status: "{{ 'PASS' if sudo_check.rc == 0 else 'WARN' }}"
+
+    ############################################################
+    # OS CHECK
+    ############################################################
+    - name: Check RHEL version
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Operating system"
+          desired: "RHEL >= {{ min_rhel_version }}"
+          observed: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+          status: >-
+            {{
+              'PASS'
+              if (ansible_distribution == 'RedHat' and
+                  ansible_distribution_version is version(min_rhel_version, '>=')) 
+              else 'FAIL'
+            }}
+
+    ############################################################
+    # CPU CHECK
+    ############################################################
+    - name: Check CPU count
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "CPU"
+          desired: ">= {{ min_cpu }} vCPUs"
+          observed: "{{ ansible_processor_vcpus }} CPUs"
+          status: "{{ 'PASS' if ansible_processor_vcpus | int >= min_cpu else 'FAIL' }}"
+
+    ############################################################
+    # MEMORY CHECK
+    ############################################################
+    - name: Check memory
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Memory"
+          desired: ">= 16GB (32GB recommended if seeding)"
+          observed: "{{ ansible_memtotal_mb }} MB"
+          status: "{{ 'PASS' if ansible_memtotal_mb | int >= min_mem_mb else 'FAIL' }}"
+
+    ############################################################
+    # DISK CHECK (TOTAL)
+    ############################################################
+    - name: Calculate total disk space
+      set_fact:
+        total_disk_bytes: "{{ ansible_mounts | map(attribute='size_available') | sum }}"
+
+    - name: Record total disk check
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Total disk"
+          desired: ">= 60GB available"
+          observed: "{{ (total_disk_bytes / 1024 / 1024 / 1024) | round(2) }} GB"
+          status: "{{ 'PASS' if total_disk_bytes | int >= min_disk_bytes else 'FAIL' }}"
+
+    ############################################################
+    # INSTALL DIR CHECK
+    ############################################################
+    - name: Get install dir stats
+      stat:
+        path: "{{ install_dir }}"
+      register: install_stat
+
+    - name: Record install dir check
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Install dir space"
+          desired: ">= 15GB free"
+          observed: "{{ (install_stat.stat.avail | default(0) / 1024 / 1024 / 1024) | round(2) }} GB"
+          status: "{{ 'PASS' if install_stat.stat.avail | int >= min_install_bytes else 'FAIL' }}"
+
+    ############################################################
+    # /var/tmp CHECK
+    ############################################################
+    - name: Get /var/tmp stats
+      stat:
+        path: /var/tmp
+      register: vartmp_stat
+
+    - name: Record /var/tmp check
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "/var/tmp space"
+          desired: ">= 3GB free"
+          observed: "{{ (vartmp_stat.stat.avail | default(0) / 1024 / 1024 / 1024) | round(2) }} GB"
+          status: "{{ 'PASS' if vartmp_stat.stat.avail | int >= min_vartmp_bytes else 'FAIL' }}"
+
+    ############################################################
+    # TMP DIR CHECK
+    ############################################################
+    - name: Get tmp dir stats
+      stat:
+        path: "{{ tmp_dir }}"
+      register: tmp_stat
+
+    - name: Record tmp dir check
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Temp dir space"
+          desired: ">= 10GB free"
+          observed: "{{ (tmp_stat.stat.avail | default(0) / 1024 / 1024 / 1024) | round(2) }} GB"
+          status: "{{ 'PASS' if tmp_stat.stat.avail | int >= min_tmp_bytes else 'FAIL' }}"
+
+    ############################################################
+    # PODMAN CHECK
+    ############################################################
+    - name: Check podman
+      command: podman --version
+      register: podman_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Record podman result
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "Podman"
+          desired: "Podman available"
+          observed: "{{ podman_check.stdout | default('not installed') }}"
+          status: "{{ 'PASS' if podman_check.rc == 0 else 'WARN' }}"
+
+    ############################################################
+    # ANSIBLE-CORE CHECK
+    ############################################################
+    - name: Check ansible-core
+      command: rpm -q ansible-core
+      register: ansible_core_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Record ansible-core result
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "ansible-core"
+          desired: "Installed"
+          observed: "{{ ansible_core_check.stdout | default('not installed') }}"
+          status: "{{ 'PASS' if ansible_core_check.rc == 0 else 'FAIL' }}"
+
+    ############################################################
+    # FINAL REPORT
+    ############################################################
+    - name: Print formatted report
+      debug:
+        msg: |
+          ============================================================
+          AAP 2.6 Containerized Growth Precheck Summary
+          ============================================================
+          {% for r in precheck_results %}
+          {{ "%-6s" | format(r.status) }} | {{ "%-20s" | format(r.requirement) }} | {{ r.observed }}
+          {% endfor %}
+
+          ------------------------------------------------------------
+          PASS={{ precheck_results | selectattr('status','equalto','PASS') | list | length }}
+          FAIL={{ precheck_results | selectattr('status','equalto','FAIL') | list | length }}
+          WARN={{ precheck_results | selectattr('status','equalto','WARN') | list | length }}
