@@ -13,7 +13,7 @@
     min_vartmp_bytes: 3221225472       # 3 GB
     min_tmp_bytes: 10737418240         # 10 GB
 
-    install_dir: "{{ lookup('env','PWD') }}"
+    install_dir: "{{ ansible_env.HOME }}"
     tmp_dir: "{{ lookup('env','TMPDIR') | default('/tmp', true) }}"
 
   tasks:
