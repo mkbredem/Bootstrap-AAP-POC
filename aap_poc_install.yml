@@ -163,7 +163,7 @@
         content: "{{ hostvars[groups['all'][0]].aap_password }}"
         mode: '0600'
       when: not secrets_encrypted
-      no_log: true
+      #no_log: true
 
     - name: Encrypt secrets.yml
       command: ansible-vault encrypt secrets.yml --vault-password-file /tmp/.vault_pass
