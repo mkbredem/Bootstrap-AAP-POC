@@ -20,15 +20,55 @@
           - ansible_distribution_major_version in supported_versions
         fail_msg: "This system must be RHEL 9 or RHEL 10."
 
-    - name: Ensure required secrets.yml variables exist
+    - name: Validate secrets.yml values
       ansible.builtin.assert:
         that:
           - aap_user is defined
           - aap_password is defined
           - aap_fqdn is defined
-        fail_msg: "aap_user, aap_password, and aap_fqdn must be set in secrets.yml"
+          - aap_user | trim | length > 0
+          - aap_password | trim | length > 0
+          - aap_fqdn | trim | length > 0
+          - not (aap_password | regex_search('<CHANGE_ME'))
+          - not (aap_fqdn | regex_search('<CHANGE_ME'))
+        fail_msg: |
+          secrets.yml contains placeholder values.
+          Update the following variables before running installation:
+            aap_password
+            aap_fqdn
+
+    - name: Validate aap_fqdn format
+      ansible.builtin.assert:
+        that:
+          - aap_fqdn is match("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
+        fail_msg: "aap_fqdn must be a valid FQDN (example: aap.example.com)"
 
   tasks:
+    ###################################################################
+    # Force systemd linger for install user
+    ###################################################################
+    - name: Determine install user
+      set_fact:
+        install_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+
+    - name: Show install user
+      debug:
+        msg: "Bootstrap installer running as user: {{ install_user }}"
+
+    - name: Enable linger for install user
+      command: loginctl enable-linger {{ install_user }}
+      ignore_errors: yes
+
+    - name: Verify linger enabled
+      command: loginctl show-user {{ install_user }} -p Linger
+      register: linger_status
+      changed_when: false
+
+    - name: Fail if linger not enabled
+      assert:
+        that:
+          - "'Linger=yes' in linger_status.stdout"
+        fail_msg: "Linger must be enabled for {{ install_user }}"
 
     ###################################################################
     # Set Hostname / FQDN
