@@ -1,0 +1,1 @@
+Place the AAP installation bundle tar file in this directory.
