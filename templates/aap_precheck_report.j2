@@ -43,6 +43,14 @@ Results:
     Configure a fully qualified hostname:
       sudo hostnamectl set-hostname server.example.com
       Ensure /etc/hosts contains the FQDN entry.
+{% elif r.requirement == "AAP Setup Bundle" %}
+  Download the AAP Containerized Setup Bundle from Red Hat Customer Portal.
+  Place the file in the project files/ directory:
+      {{ playbook_dir }}/files
+  Filename must contain:
+      setup bundle
+      .tar.gz
+  File size must be larger than 3GB.
 {% else %}
     Review system configuration to meet requirement.
 {% endif %}

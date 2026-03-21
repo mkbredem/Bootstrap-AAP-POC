@@ -179,6 +179,54 @@
           status: "{{ 'PASS' if ansible_core_check.rc == 0 else 'FAIL' }}"
 
     ############################################################
+    # CHECK FOR AAP SETUP BUNDLE IN files/
+    ############################################################
+    - name: Check files directory exists
+      stat:
+        path: "{{ playbook_dir }}/files"
+      register: files_dir
+    
+    - name: Find large files (>3GB) in files directory
+      find:
+        paths: "{{ playbook_dir }}/files"
+        recurse: no
+        size: 3g
+      register: large_files
+      when: files_dir.stat.exists
+    
+    - name: Filter setup bundle files
+      set_fact:
+        setup_bundle_files: >-
+          {{
+            (large_files.files | default([]))
+            | selectattr('path', 'search', 'setup.*bundle')
+            | selectattr('path', 'search', '.tar.gz')
+            | list
+          }}
+    
+    - name: Determine setup bundle status
+      set_fact:
+        setup_bundle_status: "{{ 'PASS' if setup_bundle_files | length > 0 else 'FAIL' }}"
+        setup_bundle_observed: >-
+          {{
+            setup_bundle_files[0].path
+            if setup_bundle_files | length > 0
+            else 'No setup bundle tar.gz (>3GB) found in files/ directory'
+          }}
+    
+    - name: Record setup bundle result
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "AAP Setup Bundle"
+          desired: "files/ansible-automation-platform-setup-bundle-*.tar.gz (>3GB)"
+          observed: "{{ setup_bundle_observed }}"
+          status: "{{ setup_bundle_status }}"
+
+
+
+    ############################################################
     # FINAL REPORT (BUILD)
     ############################################################
     - name: Generate precheck report from template
