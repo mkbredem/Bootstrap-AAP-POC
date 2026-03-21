@@ -95,23 +95,39 @@
         fail_msg: "hostname -f does not match aap_fqdn"
 
     ###################################################################
-    # Subscription Manager
+    # Validate BaseOS and AppStream repositories (RHSM or RHUI)
     ###################################################################
-    - name: Check RHSM registration
-      ansible.builtin.command: subscription-manager identity
-      register: rhsm_status
+    
+    - name: Get enabled repositories
+      ansible.builtin.command: dnf repolist --enabled
+      register: enabled_repos
       changed_when: false
-      failed_when: false
-
-    - name: Display RHSM status
+    
+    - name: Extract repo IDs
+      ansible.builtin.set_fact:
+        enabled_repo_ids: >-
+          {{
+            enabled_repos.stdout_lines
+            | map('regex_replace', '\\s+.*$', '')
+            | select('match', '^(rhel|rhui)')
+            | list
+          }}
+    
+    - name: Show enabled repos
       ansible.builtin.debug:
-        msg: "System already registered to RHSM"
-      when: rhsm_status.rc == 0
-
-    - name: Fail if system not registered
-      ansible.builtin.fail:
-        msg: "System must be registered with subscription-manager before continuing."
-      when: rhsm_status.rc != 0
+        var: enabled_repo_ids
+    
+    - name: Ensure BaseOS repo exists
+      ansible.builtin.assert:
+        that:
+          - enabled_repo_ids | select('search','baseos') | list | length > 0
+        fail_msg: "BaseOS repository not enabled."
+    
+    - name: Ensure AppStream repo exists
+      ansible.builtin.assert:
+        that:
+          - enabled_repo_ids | select('search','appstream') | list | length > 0
+        fail_msg: "AppStream repository not enabled."
 
     ###################################################################
     # Verify Repositories
