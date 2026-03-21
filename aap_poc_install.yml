@@ -129,47 +129,6 @@
           - enabled_repo_ids | select('search','appstream') | list | length > 0
         fail_msg: "AppStream repository not enabled."
 
-    ###################################################################
-    # Vault Encrypt secrets.yml
-    ###################################################################
-    - name: Create temporary vault password file
-      ansible.builtin.copy:
-        dest: /tmp/.vault_pass
-        content: "{{ aap_password }}"
-        mode: "0600"
-      no_log: true
-      delegate_to: localhost
-      become: false
-
-    - name: Check if secrets.yml already encrypted
-      ansible.builtin.slurp:
-        src: secrets.yml
-      delegate_to: localhost
-      become: false
-      register: secrets_file
-      no_log: true
-
-    - name: Determine encryption status
-      ansible.builtin.set_fact:
-        already_encrypted: "{{ (secrets_file.content | b64decode).startswith('$ANSIBLE_VAULT;') }}"
-      no_log: true
-
-    - name: Encrypt secrets.yml with ansible vault
-      ansible.builtin.command:
-        cmd: ansible-vault encrypt secrets.yml --vault-password-file /tmp/.vault_pass
-      delegate_to: localhost
-      become: false
-      when: not already_encrypted
-      no_log: true
-
-    - name: Remove temporary vault password file
-      ansible.builtin.file:
-        path: /tmp/.vault_pass
-        state: absent
-      delegate_to: localhost
-      become: false
-      no_log: true
-
   post_tasks:
     - name: Completion message
       ansible.builtin.debug:
@@ -178,3 +137,42 @@
           - "Hostname set to: {{ aap_fqdn }}"
           - "Repositories verified."
           - "secrets.yml encrypted with ansible vault."
+
+##############################################
+# PLAY 2 - Encrypt secrets.yml
+##############################################
+- name: Encrypt secrets file
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Check if secrets.yml already encrypted
+      slurp:
+        src: secrets.yml
+      register: secrets_file
+      no_log: true
+
+    - name: Determine encryption status
+      set_fact:
+        secrets_encrypted: "{{ (secrets_file.content | b64decode).startswith('$ANSIBLE_VAULT;') }}"
+      no_log: true
+
+    - name: Create vault password file
+      copy:
+        dest: /tmp/.vault_pass
+        content: "{{ hostvars[groups['all'][0]].aap_password }}"
+        mode: '0600'
+      when: not secrets_encrypted
+      no_log: true
+
+    - name: Encrypt secrets.yml
+      command: ansible-vault encrypt secrets.yml --vault-password-file /tmp/.vault_pass
+      when: not secrets_encrypted
+      no_log: true
+
+    - name: Remove vault password file
+      file:
+        path: /tmp/.vault_pass
+        state: absent
+      when: not secrets_encrypted
+      no_log: true
