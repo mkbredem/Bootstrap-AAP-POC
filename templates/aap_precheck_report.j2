@@ -39,6 +39,10 @@ Results:
     Install podman: sudo dnf install -y podman
 {% elif r.requirement == "ansible-core" %}
     Install ansible-core: sudo dnf install -y ansible-core
+{% elif r.requirement == "Hostname FQDN" %}
+    Configure a fully qualified hostname:
+      sudo hostnamectl set-hostname server.example.com
+      Ensure /etc/hosts contains the FQDN entry.
 {% else %}
     Review system configuration to meet requirement.
 {% endif %}

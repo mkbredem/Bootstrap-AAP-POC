@@ -22,7 +22,7 @@
 4. Update `secrets.yml` in this directory with the desirec password (this will be encrypted upon installation with the password you provide)
 5. Run `prerquisite_check.yml` playbook
     <pre>
-    ansible-playbook -i inventory aap_precheck.yml</pre>
+    ansible-playbook -i aap_precheck_inventory aap_precheck.yml</pre>
 
 
 ## Playbook Does

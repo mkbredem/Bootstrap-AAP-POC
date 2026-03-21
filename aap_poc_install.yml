@@ -1,0 +1,164 @@
+---
+- name: Prepare RHEL 9/10 host for AAP Containerized Installation (Section 4.3)
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - secrets.yml
+
+  vars:
+    supported_versions:
+      - "9"
+      - "10"
+
+  pre_tasks:
+    - name: Ensure OS is RHEL 9 or 10
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "RedHat"
+          - ansible_distribution_major_version in supported_versions
+        fail_msg: "This system must be RHEL 9 or RHEL 10."
+
+    - name: Ensure required secrets.yml variables exist
+      ansible.builtin.assert:
+        that:
+          - aap_user is defined
+          - aap_password is defined
+          - aap_fqdn is defined
+        fail_msg: "aap_user, aap_password, and aap_fqdn must be set in secrets.yml"
+
+  tasks:
+
+    ###################################################################
+    # Set Hostname / FQDN
+    ###################################################################
+    - name: Set system hostname to AAP FQDN
+      ansible.builtin.hostname:
+        name: "{{ aap_fqdn }}"
+
+    - name: Ensure /etc/hosts contains FQDN entry
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 {{ aap_fqdn }}"
+        state: present
+
+    - name: Verify hostname -f returns FQDN
+      ansible.builtin.command: hostname -f
+      register: fqdn_check
+      changed_when: false
+
+    - name: Fail if hostname is not FQDN
+      ansible.builtin.assert:
+        that:
+          - fqdn_check.stdout == aap_fqdn
+        fail_msg: "hostname -f does not match aap_fqdn"
+
+    ###################################################################
+    # Subscription Manager
+    ###################################################################
+    - name: Check RHSM registration
+      ansible.builtin.command: subscription-manager identity
+      register: rhsm_status
+      changed_when: false
+      failed_when: false
+
+    - name: Display RHSM status
+      ansible.builtin.debug:
+        msg: "System already registered to RHSM"
+      when: rhsm_status.rc == 0
+
+    - name: Fail if system not registered
+      ansible.builtin.fail:
+        msg: "System must be registered with subscription-manager before continuing."
+      when: rhsm_status.rc != 0
+
+    ###################################################################
+    # Verify Repositories
+    ###################################################################
+    - name: Determine expected repo IDs
+      ansible.builtin.set_fact:
+        baseos_repo: "rhel-{{ ansible_distribution_major_version }}-for-{{ ansible_architecture }}-baseos-rpms"
+        appstream_repo: "rhel-{{ ansible_distribution_major_version }}-for-{{ ansible_architecture }}-appstream-rpms"
+
+    - name: Get enabled repos
+      ansible.builtin.command: dnf repolist --enabled
+      register: enabled_repos
+      changed_when: false
+
+    - name: Parse enabled repo IDs
+      ansible.builtin.set_fact:
+        enabled_repo_ids: >-
+          {{
+            enabled_repos.stdout_lines
+            | map('regex_replace', '\\s+.*$', '')
+            | select('match', '^rhel-')
+            | list
+          }}
+
+    - name: Show enabled repos
+      ansible.builtin.debug:
+        var: enabled_repo_ids
+
+    - name: Ensure BaseOS and AppStream repos are enabled
+      ansible.builtin.assert:
+        that:
+          - baseos_repo in enabled_repo_ids
+          - appstream_repo in enabled_repo_ids
+        fail_msg: "BaseOS and AppStream repos must be enabled."
+
+    - name: Ensure only BaseOS and AppStream repos are enabled
+      ansible.builtin.assert:
+        that:
+          - enabled_repo_ids | difference([baseos_repo, appstream_repo]) | length == 0
+        fail_msg: "Only BaseOS and AppStream repos should be enabled."
+
+    ###################################################################
+    # Vault Encrypt secrets.yml
+    ###################################################################
+    - name: Create temporary vault password file
+      ansible.builtin.copy:
+        dest: /tmp/.vault_pass
+        content: "{{ aap_password }}"
+        mode: "0600"
+      no_log: true
+      delegate_to: localhost
+      become: false
+
+    - name: Check if secrets.yml already encrypted
+      ansible.builtin.slurp:
+        src: secrets.yml
+      delegate_to: localhost
+      become: false
+      register: secrets_file
+      no_log: true
+
+    - name: Determine encryption status
+      ansible.builtin.set_fact:
+        already_encrypted: "{{ (secrets_file.content | b64decode).startswith('$ANSIBLE_VAULT;') }}"
+      no_log: true
+
+    - name: Encrypt secrets.yml with ansible vault
+      ansible.builtin.command:
+        cmd: ansible-vault encrypt secrets.yml --vault-password-file /tmp/.vault_pass
+      delegate_to: localhost
+      become: false
+      when: not already_encrypted
+      no_log: true
+
+    - name: Remove temporary vault password file
+      ansible.builtin.file:
+        path: /tmp/.vault_pass
+        state: absent
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+  post_tasks:
+    - name: Completion message
+      ansible.builtin.debug:
+        msg:
+          - "RHEL host preparation for Containerized AAP complete."
+          - "Hostname set to: {{ aap_fqdn }}"
+          - "Repositories verified."
+          - "secrets.yml encrypted with ansible vault."
