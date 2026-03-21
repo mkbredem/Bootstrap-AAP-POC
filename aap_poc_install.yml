@@ -138,6 +138,10 @@
           - "Repositories verified."
           - "secrets.yml encrypted with ansible vault."
 
+    - name: Save vault password for later play
+      set_fact:
+        vault_pass_for_encrypt: "{{ aap_password }}"
+
 ##############################################
 # PLAY 2 - Encrypt secrets.yml
 ##############################################
@@ -160,7 +164,7 @@
     - name: Create vault password file
       copy:
         dest: /tmp/.vault_pass
-        content: "{{ hostvars[groups['all'][0]].aap_password }}"
+        content: "{{ hostvars[groups['all'][0]].vault_pass_for_encrypt }}"
         mode: '0600'
       when: not secrets_encrypted
       #no_log: true
