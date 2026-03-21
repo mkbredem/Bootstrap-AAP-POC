@@ -130,46 +130,6 @@
         fail_msg: "AppStream repository not enabled."
 
     ###################################################################
-    # Verify Repositories
-    ###################################################################
-    - name: Determine expected repo IDs
-      ansible.builtin.set_fact:
-        baseos_repo: "rhel-{{ ansible_distribution_major_version }}-for-{{ ansible_architecture }}-baseos-rpms"
-        appstream_repo: "rhel-{{ ansible_distribution_major_version }}-for-{{ ansible_architecture }}-appstream-rpms"
-
-    - name: Get enabled repos
-      ansible.builtin.command: dnf repolist --enabled
-      register: enabled_repos
-      changed_when: false
-
-    - name: Parse enabled repo IDs
-      ansible.builtin.set_fact:
-        enabled_repo_ids: >-
-          {{
-            enabled_repos.stdout_lines
-            | map('regex_replace', '\\s+.*$', '')
-            | select('match', '^rhel-')
-            | list
-          }}
-
-    - name: Show enabled repos
-      ansible.builtin.debug:
-        var: enabled_repo_ids
-
-    - name: Ensure BaseOS and AppStream repos are enabled
-      ansible.builtin.assert:
-        that:
-          - baseos_repo in enabled_repo_ids
-          - appstream_repo in enabled_repo_ids
-        fail_msg: "BaseOS and AppStream repos must be enabled."
-
-    - name: Ensure only BaseOS and AppStream repos are enabled
-      ansible.builtin.assert:
-        that:
-          - enabled_repo_ids | difference([baseos_repo, appstream_repo]) | length == 0
-        fail_msg: "Only BaseOS and AppStream repos should be enabled."
-
-    ###################################################################
     # Vault Encrypt secrets.yml
     ###################################################################
     - name: Create temporary vault password file
