@@ -129,6 +129,64 @@
           - enabled_repo_ids | select('search','appstream') | list | length > 0
         fail_msg: "AppStream repository not enabled."
 
+    ###################################################################
+    # Locate, clean, and extract AAP setup bundle
+    ###################################################################
+    
+    - name: Find AAP setup bundle
+      find:
+        paths: "{{ playbook_dir }}/files"
+        patterns: "*.tar.gz*"
+        file_type: file
+      register: bundle_files
+    
+    - name: Ensure exactly one bundle exists
+      assert:
+        that:
+          - bundle_files.matched == 1
+        fail_msg: "Expected exactly one setup bundle in files/ directory."
+    
+    - name: Set bundle file variables
+      set_fact:
+        bundle_full_path: "{{ bundle_files.files[0].path }}"
+        bundle_filename: "{{ bundle_files.files[0].path | basename }}"
+    
+    - name: Create cleaned bundle filename
+      set_fact:
+        bundle_clean_name: "{{ bundle_filename | regex_replace('\\?.*$', '') }}"
+    
+    - name: Rename bundle file if downloaded via wget
+      command:
+        cmd: mv "{{ bundle_full_path }}" "{{ playbook_dir }}/files/{{ bundle_clean_name }}"
+      when: bundle_filename != bundle_clean_name
+    
+    - name: Set final bundle path
+      set_fact:
+        bundle_final_path: "{{ playbook_dir }}/files/{{ bundle_clean_name }}"
+    
+    - name: Extract setup bundle to install user home directory
+      unarchive:
+        src: "{{ bundle_final_path }}"
+        dest: "/home/{{ install_user }}/"
+        remote_src: true
+        owner: "{{ install_user }}"
+        group: "{{ install_user }}"
+    
+    - name: Find extracted setup directory
+      find:
+        paths: "/home/{{ install_user }}"
+        file_type: directory
+        patterns: "ansible-automation-platform-containerized-*"
+      register: extracted_dir
+    
+    - name: Set extracted directory path
+      set_fact:
+        aap_setup_dir: "{{ extracted_dir.files[0].path }}"
+    
+    - name: Show extracted directory
+      debug:
+        msg: "AAP setup extracted to {{ aap_setup_dir }}"
+
   post_tasks:
     - name: Completion message
       ansible.builtin.debug:
