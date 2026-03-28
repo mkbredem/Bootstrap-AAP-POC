@@ -187,6 +187,16 @@
       debug:
         msg: "AAP setup extracted to {{ aap_setup_dir }}"
 
+    ############################################################
+    # Copy CAC postinstall directory into bundle directory
+    ############################################################
+    
+    - name: Copy CAC directory into bundle files directory
+      copy:
+        src: "{{ playbook_dir }}/files/cac/"
+        dest: "{{ bundle_extract_dir }}/cac/"
+        mode: preserve
+
     - name: Find manifest zip file
       find:
         paths: "{{ playbook_dir }}/files"
