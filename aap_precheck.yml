@@ -234,7 +234,7 @@
         recurse: no
         patterns: "manifest_*.zip"
       register: manifest_files
-      when: files_dir_manifest.stat.exists
+      when: files_dir.stat.exists
     
     - name: Determine manifest file status
       set_fact:
