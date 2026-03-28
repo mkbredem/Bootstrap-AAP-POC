@@ -13,7 +13,20 @@
     - Configure a dedicated non-root user on the Red Hat Enterprise Linux host
     - Register your Red Hat Enterprise Linux host with `subscription-manager`
     - Install ansible-core
-2. Sign up for [AAP Trial Subscription](https://www.redhat.com/en/technologies/management/ansible/trial?sc_cid=RHCTN0230000276044&gclsrc=aw.ds&&gclsrc=aw.ds&gad_source=1&gad_campaignid=20264085056&gbraid=0AAAAADsbVMSTHEHwUfwrKOd8tw57ZRPpn&gclid=EAIaIQobChMI_4uXuLyEkwMVpm5_AB1HtBDlEAAYASABEgJfdvD_BwE) (100 nodes for 60 days)
+3. Sign up for [AAP Trial Subscription](https://www.redhat.com/en/technologies/management/ansible/trial?sc_cid=RHCTN0230000276044&gclsrc=aw.ds&&gclsrc=aw.ds&gad_source=1&gad_campaignid=20264085056&gbraid=0AAAAADsbVMSTHEHwUfwrKOd8tw57ZRPpn&gclid=EAIaIQobChMI_4uXuLyEkwMVpm5_AB1HtBDlEAAYASABEgJfdvD_BwE) (100 nodes for 60 days)
+
+    2.1 Download and save manifest to `files/` directory in this  project
+        2.1.1 Create a new [Subscription Allocation](https://access.redhat.com/management/subscription_allocations/new) (follow link and populate fields below) <br>
+            - Name: '<a_meaningful_name>' </br>
+            - Type: 'Satellite 6.'<latest>'</br>
+        2.1.2 Click `Create` (button) <br>
+        2.1.3 Go to `Subcriptions` (tab) and click `Add Subscriptions` (button)<br>
+        2.1.4 Set `Entitlements` (field) to 100 for the "60 Day Product Trial of Red Hat Ansible Automation Platform, Self-Supported (100 Managed Nodes)" subscription<br>
+        2.1.5 Click `Submit` (button) <br>
+        2.1.6 Click `Export Manifest` (botton - top right) -> Saved workstation `Downloads` folder
+    2.2 Save the resulting `~/Downloads/manifest_<Name>_<TimeStamp>.zip` file to the  `Bootstrap-aap-poc'/files/` folder
+
+
 3. Clone this repo to your RHEL9 or RHEL10 Server while signed in as the non-root user (Where the [AAP growth topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#cont-a-env-a) will be deployed)
 4. Download the **Ansible Automation Platform 2.6 Containerized Setup Bundle** for  RHEL9 **OR** RHEL10 Installer to `files/` folder in this project
     - [**AAP 2.6 Containerized Setup Bundle - RHEL10**](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---10/2.6/x86_64/product-software) 

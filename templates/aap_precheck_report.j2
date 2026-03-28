@@ -51,6 +51,12 @@ Results:
       setup bundle
       .tar.gz
   File size must be larger than 3GB.
+{% elif r.requirement == "AAP Manifest File" %}
+  Download the manifest zip from Red Hat Customer Portal.
+  Place the file in the project files/ directory:
+      {{ playbook_dir }}/files
+  Filename must match:
+      manifest_*.zip
 {% else %}
     Review system configuration to meet requirement.
 {% endif %}

@@ -224,7 +224,37 @@
           observed: "{{ setup_bundle_observed }}"
           status: "{{ setup_bundle_status }}"
 
-
+    ############################################################
+    # CHECK FOR MANIFEST ZIP IN files/
+    ############################################################
+  
+    - name: Find manifest zip files in files directory
+      find:
+        paths: "{{ playbook_dir }}/files"
+        recurse: no
+        patterns: "manifest_*.zip"
+      register: manifest_files
+      when: files_dir_manifest.stat.exists
+    
+    - name: Determine manifest file status
+      set_fact:
+        manifest_status: "{{ 'PASS' if (manifest_files.files | default([])) | length > 0 else 'FAIL' }}"
+        manifest_observed: >-
+          {{
+            manifest_files.files[0].path
+            if (manifest_files.files | default([])) | length > 0
+            else 'No manifest_*.zip file found in files/ directory'
+          }}
+    
+    - name: Record manifest result
+      set_fact:
+        precheck_results: "{{ precheck_results + [ result ] }}"
+      vars:
+        result:
+          requirement: "AAP Manifest File"
+          desired: "files/manifest_*.zip"
+          observed: "{{ manifest_observed }}"
+          status: "{{ manifest_status }}"
 
     ############################################################
     # FINAL REPORT (BUILD)
