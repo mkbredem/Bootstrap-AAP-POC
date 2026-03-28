@@ -200,6 +200,22 @@
       set_fact:
         vault_pass_for_encrypt: "{{ aap_password }}"
 
+    ###################################################################
+    # Copy and render inventory file into extracted bundle directory
+    ###################################################################
+
+    - name: Render inventory-growth from template
+      ansible.builtin.template:
+        src: inventory-growth.j2
+        dest: "{{ aap_setup_dir }}/inventory-growth"
+        owner: "{{ install_user }}"
+        group: "{{ install_user }}"
+        mode: '0644'
+
+    - name: Show inventory location
+      ansible.builtin.debug:
+        msg: "Inventory file created at {{ aap_setup_dir }}/inventory-growth"
+
 ##############################################
 # PLAY 2 - Encrypt secrets.yml
 ##############################################

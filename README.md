@@ -4,7 +4,7 @@
 - POC deployments for containerized AAP 2.6 [AAP growth topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#cont-a-env-a) (this minimizes host and resource requirements).  
 - Only the bundeled install option is used for simplicity; this will work in disconnected environments as well as environments with internet access (the installer doesn't need to reach out)
 
->[!IMPORTANT]
+>[!IMPORTANT]  
 >For disconnected installations, follow the steps in [Obtaining and configuring RHEL RPM source dependencies](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/aap-containerized-disconnected-installation#obtaining-and-configuring-rpm-dependencies) (BaseOS and AppStream repos). 
 
 ## You Do (Prep Work)
@@ -19,10 +19,16 @@
     - [**AAP 2.6 Containerized Setup Bundle - RHEL10**](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---10/2.6/x86_64/product-software) 
     - [**AAP 2.6 Containerized Setup Bundle - RHEL9**](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---10/2.6/x86_64/product-software)
 
-4. Update `secrets.yml` in this directory with the desirec password (this will be encrypted upon installation with the password you provide)
-5. Run `prerquisite_check.yml` playbook
+4. Update `secrets.yml` in this directory with the desired password (this will be encrypted upon installation with the password you provide)
+5. Run `aap_precheck.yml` playbook using `aap_precheck_inventory` inventory
     <pre>
     ansible-playbook -i aap_precheck_inventory aap_precheck.yml</pre>
+
+    >[!IMPORTANT]  
+    >If anything fails (doesn't meet minimum requirements), fix and rerun aap_precheck.yml 
+
+6. Run `aap_install_prep.yml` to prepare installation files (this is not the actual installation)
+
 
 
 ## Playbook Does
