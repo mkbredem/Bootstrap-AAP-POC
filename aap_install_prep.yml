@@ -163,14 +163,15 @@
     - name: Set final bundle path
       set_fact:
         bundle_final_path: "{{ playbook_dir }}/files/{{ bundle_clean_name }}"
-    
-    - name: Extract setup bundle to install user home directory
-      unarchive:
-        src: "{{ bundle_final_path }}"
-        dest: "/home/{{ install_user }}/"
-        remote_src: true
-        owner: "{{ install_user }}"
-        group: "{{ install_user }}"
+
+#Temporarily commented out while developing and testing    
+#    - name: Extract setup bundle to install user home directory
+#      unarchive:
+#        src: "{{ bundle_final_path }}"
+#        dest: "/home/{{ install_user }}/"
+#        remote_src: true
+#        owner: "{{ install_user }}"
+#        group: "{{ install_user }}"
     
     - name: Find extracted setup directory
       find:
@@ -194,7 +195,7 @@
     - name: Copy CAC directory into bundle files directory
       copy:
         src: "{{ playbook_dir }}/files/cac/"
-        dest: "{{ bundle_extract_dir }}/cac/"
+        dest: "{{ aap_setup_dir }}/cac/"
         mode: preserve
 
     - name: Find manifest zip file
