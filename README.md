@@ -7,7 +7,7 @@
 >[!IMPORTANT]
 >For disconnected installations, follow the steps in [Obtaining and configuring RHEL RPM source dependencies](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/aap-containerized-disconnected-installation#obtaining-and-configuring-rpm-dependencies) (BaseOS and AppStream repos). 
 
-## You Do
+## You Do (Prep Work)
 1. Provision a RHEL 9 or RHEL 10 server that meets these [Table 2.1. Virtual machine requirements](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#infrastructure_topology) (may need to scroll past the diagram to see the table)
 2. Configure the following on the Red Hat Enterprise Linux host (see [prerequisates](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/preparing-containerized-installation#prerequisites) for details):
     - Configure a dedicated non-root user on the Red Hat Enterprise Linux host
