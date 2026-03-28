@@ -57,7 +57,12 @@ bundle_install=true
 # The bundle directory must include /bundle in the path
 bundle_dir='{{ '{{ lookup("ansible.builtin.env", "PWD") }}/bundle' }}'
 
+# ------------------------------------------------------------
+# Controller Postinstall / License
+# ------------------------------------------------------------
 controller_postinstall=true
+controller_license_file={{ playbook_dir }}/files/{{ manifest_zip }}
+controller_postinstall_dir={{ playbook_dir }}/files/cac
 
 redis_mode=standalone
 

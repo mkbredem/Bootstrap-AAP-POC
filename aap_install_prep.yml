@@ -187,18 +187,17 @@
       debug:
         msg: "AAP setup extracted to {{ aap_setup_dir }}"
 
-  post_tasks:
-    - name: Completion message
-      ansible.builtin.debug:
-        msg:
-          - "RHEL host preparation for Containerized AAP complete."
-          - "Hostname set to: {{ aap_fqdn }}"
-          - "Repositories verified."
-          - "secrets.yml encrypted with ansible vault."
-
-    - name: Save vault password for later play
+    - name: Find manifest zip file
+      find:
+        paths: "{{ playbook_dir }}/files"
+        recurse: no
+        patterns: "manifest_*.zip"
+      register: manifest_files
+    
+    - name: Set manifest filename
       set_fact:
-        vault_pass_for_encrypt: "{{ aap_password }}"
+        manifest_zip: "{{ manifest_files.files[0].path | basename }}"
+      when: manifest_files.files | length > 0
 
     ###################################################################
     # Copy and render inventory file into extracted bundle directory
@@ -215,6 +214,20 @@
     - name: Show inventory location
       ansible.builtin.debug:
         msg: "Inventory file created at {{ aap_setup_dir }}/inventory-growth"
+
+  post_tasks:
+    - name: Completion message
+      ansible.builtin.debug:
+        msg:
+          - "RHEL host preparation for Containerized AAP complete."
+          - "Hostname set to: {{ aap_fqdn }}"
+          - "Repositories verified."
+          - "secrets.yml encrypted with ansible vault."
+
+    - name: Save vault password for later play
+      set_fact:
+        vault_pass_for_encrypt: "{{ aap_password }}"
+
 
 ##############################################
 # PLAY 2 - Encrypt secrets.yml
