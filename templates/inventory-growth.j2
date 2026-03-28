@@ -61,8 +61,8 @@ bundle_dir='{{ '{{ lookup("ansible.builtin.env", "PWD") }}/bundle' }}'
 # Controller Postinstall / License
 # ------------------------------------------------------------
 controller_postinstall=true
-controller_license_file='{{ '{{ lookup("ansible.builtin.env", "PWD") }}/{{ manifest_zip }} }}'
-controller_postinstall_dir='{{ '{{ lookup("ansible.builtin.env", "PWD") }}/cac' }}'
+controller_license_file={{ aap_setup_dir }}/{{ manifest_zip }}
+controller_postinstall_dir={{ aap_setup_dir }}//cac/ }}
 
 redis_mode=standalone
 
