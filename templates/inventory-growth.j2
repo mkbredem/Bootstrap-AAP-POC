@@ -55,7 +55,7 @@ postgresql_admin_password={{ aap_password }}
 
 bundle_install=true
 # The bundle directory must include /bundle in the path
-bundle_dir='{{ lookup("ansible.builtin.env", "PWD") }}/bundle'
+bundle_dir='{{ '{{ lookup("ansible.builtin.env", "PWD") }}/bundle' }}'
 
 
 redis_mode=standalone
