@@ -45,7 +45,7 @@
 
   tasks:
     ###################################################################
-    # Force systemd linger for install user
+    # Determine install user
     ###################################################################
     - name: Determine install user
       set_fact:
@@ -55,6 +55,72 @@
       debug:
         msg: "Bootstrap installer running as user: {{ install_user }}"
 
+    ###################################################################
+    # Optional: RHSM Registration
+    ###################################################################
+    - name: Check if host is already registered with subscription-manager
+      ansible.builtin.command: subscription-manager status
+      register: rhsm_status
+      ignore_errors: true
+      changed_when: false
+
+    - name: Register with subscription-manager using activation key
+      ansible.builtin.command: >
+        subscription-manager register
+        --org={{ rhsm_org }}
+        --activationkey={{ rhsm_activation_key }}
+        --force
+      when:
+        - rhsm_status.rc != 0
+        - rhsm_org is defined and rhsm_org | trim | length > 0
+        - rhsm_activation_key is defined and rhsm_activation_key | trim | length > 0
+      no_log: true
+
+    - name: Register with subscription-manager using username/password
+      ansible.builtin.command: >
+        subscription-manager register
+        --username={{ rhsm_username }}
+        --password={{ rhsm_password }}
+        --auto-attach
+        --force
+      when:
+        - rhsm_status.rc != 0
+        - rhsm_org is not defined or rhsm_org | trim | length == 0
+        - rhsm_activation_key is not defined or rhsm_activation_key | trim | length == 0
+        - rhsm_username is defined and rhsm_username | trim | length > 0
+        - rhsm_password is defined and rhsm_password | trim | length > 0
+      no_log: true
+
+    ###################################################################
+    # Install prerequisites if missing
+    ###################################################################
+    - name: Check ansible-core
+      ansible.builtin.command: rpm -q ansible-core
+      register: ansible_core_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install ansible-core if missing
+      ansible.builtin.dnf:
+        name: ansible-core
+        state: present
+      when: ansible_core_check.rc != 0
+
+    - name: Check podman
+      ansible.builtin.command: podman --version
+      register: podman_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install podman if missing
+      ansible.builtin.dnf:
+        name: podman
+        state: present
+      when: podman_check.rc != 0
+
+    ###################################################################
+    # Force systemd linger for install user
+    ###################################################################
     - name: Enable linger for install user
       command: loginctl enable-linger {{ install_user }}
       ignore_errors: yes
@@ -97,12 +163,11 @@
     ###################################################################
     # Validate BaseOS and AppStream repositories (RHSM or RHUI)
     ###################################################################
-    
     - name: Get enabled repositories
       ansible.builtin.command: dnf repolist --enabled
       register: enabled_repos
       changed_when: false
-    
+
     - name: Extract repo IDs
       ansible.builtin.set_fact:
         enabled_repo_ids: >-
@@ -112,17 +177,17 @@
             | select('match', '^(rhel|rhui)')
             | list
           }}
-    
+
     - name: Show enabled repos
       ansible.builtin.debug:
         var: enabled_repo_ids
-    
+
     - name: Ensure BaseOS repo exists
       ansible.builtin.assert:
         that:
           - enabled_repo_ids | select('search','baseos') | list | length > 0
         fail_msg: "BaseOS repository not enabled."
-    
+
     - name: Ensure AppStream repo exists
       ansible.builtin.assert:
         that:
@@ -132,88 +197,112 @@
     ###################################################################
     # Locate, clean, and extract AAP setup bundle
     ###################################################################
-    
     - name: Find AAP setup bundle
       find:
         paths: "{{ playbook_dir }}/files"
         patterns: "*.tar.gz*"
         file_type: file
       register: bundle_files
-    
+
     - name: Ensure exactly one bundle exists
       assert:
         that:
           - bundle_files.matched == 1
         fail_msg: "Expected exactly one setup bundle in files/ directory."
-    
+
     - name: Set bundle file variables
       set_fact:
         bundle_full_path: "{{ bundle_files.files[0].path }}"
         bundle_filename: "{{ bundle_files.files[0].path | basename }}"
-    
+
     - name: Create cleaned bundle filename
       set_fact:
         bundle_clean_name: "{{ bundle_filename | regex_replace('\\?.*$', '') }}"
-    
+
     - name: Rename bundle file if downloaded via wget
       command:
         cmd: mv "{{ bundle_full_path }}" "{{ playbook_dir }}/files/{{ bundle_clean_name }}"
       when: bundle_filename != bundle_clean_name
-    
+
     - name: Set final bundle path
       set_fact:
         bundle_final_path: "{{ playbook_dir }}/files/{{ bundle_clean_name }}"
 
-#Temporarily commented out while developing and testing    
-#    - name: Extract setup bundle to install user home directory
-#      unarchive:
-#        src: "{{ bundle_final_path }}"
-#        dest: "/home/{{ install_user }}/"
-#        remote_src: true
-#        owner: "{{ install_user }}"
-#        group: "{{ install_user }}"
-    
+    - name: Extract setup bundle to install user home directory
+      unarchive:
+        src: "{{ bundle_final_path }}"
+        dest: "/home/{{ install_user }}/"
+        remote_src: true
+        owner: "{{ install_user }}"
+        group: "{{ install_user }}"
+
     - name: Find extracted setup directory
       find:
         paths: "/home/{{ install_user }}"
         file_type: directory
         patterns: "ansible-automation-platform-containerized-*"
       register: extracted_dir
-    
+
+    - name: Fail if extracted directory not found
+      assert:
+        that:
+          - extracted_dir.files | length > 0
+        fail_msg: "Could not find extracted AAP setup directory under /home/{{ install_user }}/"
+
     - name: Set extracted directory path
       set_fact:
         aap_setup_dir: "{{ extracted_dir.files[0].path }}"
-    
+
     - name: Show extracted directory
       debug:
         msg: "AAP setup extracted to {{ aap_setup_dir }}"
 
-    ############################################################
-    # Copy CAC postinstall directory into bundle directory
-    ############################################################
-    
-    - name: Copy CAC directory into bundle files directory
-      copy:
-        src: "{{ playbook_dir }}/files/cac/"
-        dest: "{{ aap_setup_dir }}/cac/"
-        mode: preserve
-
+    ###################################################################
+    # Find and validate manifest zip
+    ###################################################################
     - name: Find manifest zip file
       find:
         paths: "{{ playbook_dir }}/files"
         recurse: no
         patterns: "manifest_*.zip"
       register: manifest_files
-    
+
+    - name: Assert manifest zip was found
+      assert:
+        that:
+          - manifest_files.files | length > 0
+        fail_msg: |
+          No manifest_*.zip found in files/ directory.
+          Download your subscription manifest from Red Hat Customer Portal and place it in files/.
+
     - name: Set manifest filename
       set_fact:
         manifest_zip: "{{ manifest_files.files[0].path | basename }}"
-      when: manifest_files.files | length > 0
+
+    ############################################################
+    # Render and copy CAC postinstall directory into bundle directory
+    ############################################################
+    - name: Create cac directory in bundle
+      file:
+        path: "{{ aap_setup_dir }}/cac"
+        state: directory
+        owner: "{{ install_user }}"
+        group: "{{ install_user }}"
+        mode: '0755'
+
+    - name: Render CaC templates into bundle cac directory
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ aap_setup_dir }}/cac/{{ item | basename | regex_replace('\\.j2$', '') }}"
+        owner: "{{ install_user }}"
+        group: "{{ install_user }}"
+        mode: '0644'
+      with_fileglob:
+        - "{{ playbook_dir }}/files/cac/*.yaml.j2"
 
     ###################################################################
     # Copy and render inventory file into extracted bundle directory
     ###################################################################
-
     - name: Render inventory-growth from template
       ansible.builtin.template:
         src: inventory-growth.j2
@@ -233,11 +322,14 @@
           - "RHEL host preparation for Containerized AAP complete."
           - "Hostname set to: {{ aap_fqdn }}"
           - "Repositories verified."
-          - "secrets.yml encrypted with ansible vault."
+          - "Setup bundle extracted to: {{ aap_setup_dir }}"
+          - "CaC resources rendered and staged."
 
-    - name: Save vault password for later play
+    - name: Save facts for later plays
       set_fact:
         vault_pass_for_encrypt: "{{ aap_password }}"
+        aap_setup_dir_for_install: "{{ aap_setup_dir }}"
+        install_user_for_install: "{{ install_user }}"
 
 
 ##############################################
@@ -265,7 +357,6 @@
         content: "{{ hostvars[groups['all'][0]].vault_pass_for_encrypt }}"
         mode: '0600'
       when: not secrets_encrypted
-      #no_log: true
 
     - name: Encrypt secrets.yml
       command: ansible-vault encrypt secrets.yml --vault-password-file /tmp/.vault_pass
@@ -278,3 +369,57 @@
         state: absent
       when: not secrets_encrypted
       no_log: true
+
+
+##############################################
+# PLAY 3 - Run the AAP Installer
+##############################################
+- name: Run AAP Containerized Installer
+  hosts: all
+  become: false
+  gather_facts: false
+
+  tasks:
+    - name: Set installer facts from prep play
+      set_fact:
+        aap_setup_dir: "{{ hostvars[inventory_hostname].aap_setup_dir_for_install }}"
+        install_user: "{{ hostvars[inventory_hostname].install_user_for_install }}"
+
+    - name: Run AAP containerized installer
+      ansible.builtin.command:
+        cmd: >
+          ansible-playbook
+          -i inventory-growth
+          ansible.containerized_installer.install
+        chdir: "{{ aap_setup_dir }}"
+      become: false
+      async: 7200
+      poll: 30
+      register: install_result
+
+    - name: Show installer output
+      debug:
+        msg: "{{ install_result.stdout_lines | default([]) }}"
+
+    - name: Fail with installer stderr if install failed
+      fail:
+        msg: "{{ install_result.stderr_lines | default([]) }}"
+      when: install_result.rc is defined and install_result.rc != 0
+
+    - name: Post-install summary
+      ansible.builtin.debug:
+        msg:
+          - "============================================"
+          - " AAP Installation Complete!"
+          - "============================================"
+          - " Access your AAP instance at:"
+          - "   https://{{ hostvars[groups['all'][0]].aap_fqdn }}"
+          - " Username: {{ hostvars[groups['all'][0]].aap_user }}"
+          - " Password: (the value you set in secrets.yml)"
+          - "============================================"
+          - " Pre-loaded Controller Resources:"
+          - "   - Organization: Ansible Product Demos (APD)"
+          - "   - Project: Ansible Product Demos (GitHub)"
+          - "   - Inventory: Demo Inventory + AWS"
+          - "   - Job Template: APD | Single demo setup"
+          - "============================================"

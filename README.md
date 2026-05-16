@@ -1,55 +1,153 @@
 # Bootstrap-AAP-POC (AAP 2.6)
 
-## This repo only supports:
-- POC deployments for containerized AAP 2.6 [AAP growth topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#cont-a-env-a) (this minimizes host and resource requirements).  
-- Only the bundeled install option is used for simplicity; this will work in disconnected environments as well as environments with internet access (the installer doesn't need to reach out)
+## What This Does
 
->[!IMPORTANT]  
->For disconnected installations, follow the steps in [Obtaining and configuring RHEL RPM source dependencies](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/aap-containerized-disconnected-installation#obtaining-and-configuring-rpm-dependencies) (BaseOS and AppStream repos). 
+Bootstraps a fully configured **Containerized AAP 2.6 POC** on a single RHEL 9 or RHEL 10 host using the [growth topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#cont-a-env-a) (Controller + Hub + EDA + Gateway, all on one machine).
 
-## You Do (Prep Work)
-1. Provision a RHEL 9 or RHEL 10 server that meets these [Table 2.1. Virtual machine requirements](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#infrastructure_topology) (may need to scroll past the diagram to see the table)
-2. Configure the following on the Red Hat Enterprise Linux host (see [prerequisates](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/preparing-containerized-installation#prerequisites) for details):
-    - Configure a dedicated non-root user on the Red Hat Enterprise Linux host
-    - Register your Red Hat Enterprise Linux host with `subscription-manager`
-    - Install ansible-core
-3. Sign up for [AAP Trial Subscription](https://www.redhat.com/en/technologies/management/ansible/trial?sc_cid=RHCTN0230000276044&gclsrc=aw.ds&&gclsrc=aw.ds&gad_source=1&gad_campaignid=20264085056&gbraid=0AAAAADsbVMSTHEHwUfwrKOd8tw57ZRPpn&gclid=EAIaIQobChMI_4uXuLyEkwMVpm5_AB1HtBDlEAAYASABEgJfdvD_BwE) (100 nodes for 60 days)
+After running, you get a fully licensed AAP instance with these resources pre-loaded and ready to demo:
 
-    2.1 Download and save manifest to `files/` directory in this  project
-        2.1.1 Create a new [Subscription Allocation](https://access.redhat.com/management/subscription_allocations/new) (follow link and populate fields below) <br>
-            - Name: '<a_meaningful_name>' </br>
-            - Type: 'Satellite 6.'<latest>'</br>
-        2.1.2 Click `Create` (button) <br>
-        2.1.3 Go to `Subcriptions` (tab) and click `Add Subscriptions` (button)<br>
-        2.1.4 Set `Entitlements` (field) to 100 for the "60 Day Product Trial of Red Hat Ansible Automation Platform, Self-Supported (100 Managed Nodes)" subscription<br>
-        2.1.5 Click `Submit` (button) <br>
-        2.1.6 Click `Export Manifest` (botton - top right) -> Saved workstation `Downloads` folder
-    2.2 Save the resulting `~/Downloads/manifest_<Name>_<TimeStamp>.zip` file to the  `Bootstrap-aap-poc'/files/` folder
+| Resource | Details |
+|----------|---------|
+| Organization | Ansible Product Demos (APD) |
+| Project | [Ansible Product Demos](https://github.com/ansible/product-demos) (GitHub) |
+| Inventories | Demo Inventory, AWS |
+| Job Template | APD \| Single demo setup |
+| Credential | AAP Credential (wired to your instance) |
 
+>[!NOTE]
+>Only the **bundled install** option is used — no internet access required by the AAP installer itself. Works in both connected and disconnected environments.
 
-3. Clone this repo to your RHEL9 or RHEL10 Server while signed in as the non-root user (Where the [AAP growth topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#cont-a-env-a) will be deployed)
-4. Download the **Ansible Automation Platform 2.6 Containerized Setup Bundle** for  RHEL9 **OR** RHEL10 Installer to `files/` folder in this project
-    - [**AAP 2.6 Containerized Setup Bundle - RHEL10**](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---10/2.6/x86_64/product-software) 
-    - [**AAP 2.6 Containerized Setup Bundle - RHEL9**](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---10/2.6/x86_64/product-software)
+>[!IMPORTANT]
+>For disconnected installations, follow the steps in [Obtaining and configuring RHEL RPM source dependencies](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/aap-containerized-disconnected-installation#obtaining-and-configuring-rpm-dependencies) (BaseOS and AppStream repos).
 
-4. Update `secrets.yml` in this directory with the desired password (this will be encrypted upon installation with the password you provide)
-5. Run `aap_precheck.yml` playbook using `aap_precheck_inventory` inventory
-    <pre>
-    ansible-playbook -i aap_precheck_inventory aap_precheck.yml</pre>
+---
 
-    >[!IMPORTANT]  
-    >If anything fails (doesn't meet minimum requirements), fix and rerun aap_precheck.yml 
+## Quick Start
 
-6. Run `aap_install_prep.yml` to prepare installation files (this is not the actual installation)
+### Step 1 — Provision a RHEL 9 or RHEL 10 Host
 
+The host must meet the [growth topology hardware requirements](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#infrastructure_topology):
 
+- 4+ vCPUs
+- 16 GB RAM (32 GB recommended)
+- 60 GB disk
 
-## Playbook Does
-1. Extract installer on your RHEL9 or RHEL10 AAP Host
-2. Ensure host is configured as outlined by Preparing RHEL Host docs:
-    - Ensure that the hostname of your host uses a fully qualified domain name (FQDN provided in `secrets.yml` file)
-    - Verify that only the BaseOS and AppStream repositories are enabled on the host
-    - 
-2. Vault Encrypt secrets file
-3. Copy/replace inventory/Inventory file to reflect bundled growth topology (essentially swap out fqdn for being deployed on)
-3. Copy CasC file into installation directory (this will install the setup job templates and resources used in demo)
+Configure a **dedicated non-root user** with passwordless sudo on this host (see [prerequisites](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/preparing-containerized-installation#prerequisites)).
+
+### Step 2 — Get an AAP Trial Subscription and Download the Manifest
+
+1. Sign up for an [AAP 60-Day Trial](https://www.redhat.com/en/technologies/management/ansible/trial) (100 managed nodes, no credit card)
+2. Create a [Subscription Allocation](https://access.redhat.com/management/subscription_allocations/new):
+   - **Name:** anything meaningful
+   - **Type:** Satellite 6.`<latest>`
+3. Click **Create**, then go to the **Subscriptions** tab
+4. Click **Add Subscriptions** and set **Entitlements** to `100` for the 60-day trial SKU
+5. Click **Submit**, then **Export Manifest** (top right)
+6. Save the resulting `manifest_<Name>_<Timestamp>.zip` to the `files/` directory in this project
+
+### Step 3 — Download the AAP Setup Bundle
+
+Download the **Ansible Automation Platform 2.6 Containerized Setup Bundle** and save it to the `files/` directory:
+
+- [AAP 2.6 Containerized Setup Bundle — RHEL 9](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---9/2.6/x86_64/product-software)
+- [AAP 2.6 Containerized Setup Bundle — RHEL 10](https://access.redhat.com/downloads/content/480/ver=2.6/rhel---10/2.6/x86_64/product-software)
+
+### Step 4 — Edit `secrets.yml`
+
+```yaml
+aap_user: admin
+aap_password: <your-chosen-admin-password>
+aap_fqdn: <fqdn-of-your-rhel-host>       # e.g. aap.example.com
+```
+
+If your host is **not yet registered** with Red Hat, add one of these auth blocks (leave blank if already subscribed):
+
+```yaml
+# Preferred: activation key
+rhsm_org: <your-org-id>
+rhsm_activation_key: <your-activation-key>
+
+# Alternative: username + password
+# rhsm_username: <your-redhat-username>
+# rhsm_password: <your-redhat-password>
+```
+
+### Step 5 — Clone This Repo to the RHEL Host and Run
+
+```bash
+git clone <this-repo-url>
+cd Bootstrap-AAP-POC
+ansible-playbook -i aap_precheck_inventory site.yml
+```
+
+That's it. The playbook will:
+
+1. **Precheck** — validate the host meets all requirements
+2. **Prep** — register RHSM (if needed), install prerequisites, set FQDN, extract the bundle, render inventory + CaC files, vault-encrypt `secrets.yml`
+3. **Install** — run the AAP containerized installer end-to-end
+
+When complete, access your instance at `https://<aap_fqdn>` with the credentials from `secrets.yml`.
+
+---
+
+## Running Playbooks Individually
+
+If you prefer to run steps separately:
+
+```bash
+# Validate host readiness only
+ansible-playbook -i aap_precheck_inventory aap_precheck.yml
+
+# Prepare files only (skip installer)
+ansible-playbook -i aap_precheck_inventory aap_install_prep.yml
+
+# Skip precheck on subsequent runs
+ansible-playbook -i aap_precheck_inventory site.yml --skip-tags precheck
+```
+
+>[!IMPORTANT]
+>If anything fails during precheck, fix the issue and rerun before proceeding.
+
+---
+
+## What Gets Pre-Loaded (CaC)
+
+The `files/cac/` directory contains [Configuration as Code](https://github.com/redhat-cop/controller_configuration) templates that are rendered and applied automatically by the AAP installer's `controller_postinstall` feature.
+
+| File | Contents |
+|------|---------|
+| `controller_organizations.yaml.j2` | Ansible Product Demos (APD) org |
+| `controller_credentials.yaml.j2` | AAP credential wired to your instance |
+| `controller_inventories.yaml.j2` | Demo Inventory + AWS inventory |
+| `controller_projects.yaml.j2` | Ansible Product Demos GitHub project |
+| `controller_job_templates.yaml.j2` | APD \| Single demo setup template |
+| `inventory_sources.yaml.j2` | AWS EC2 inventory source |
+
+To add more pre-loaded resources, drop additional `.yaml.j2` files into `files/cac/` following the [infra.controller_configuration](https://github.com/redhat-cop/controller_configuration) variable naming conventions.
+
+---
+
+## File Layout
+
+```
+Bootstrap-AAP-POC/
+├── site.yml                    # Single entry-point — run this
+├── aap_precheck.yml            # Host readiness checks
+├── aap_install_prep.yml        # Prep + installer (3 plays)
+├── aap_precheck_inventory      # Localhost inventory
+├── secrets.yml                 # Your credentials (vault-encrypted after first run)
+├── files/
+│   ├── readme.txt              # Instructions for files to place here
+│   ├── manifest_*.zip          # Your subscription manifest (you provide)
+│   ├── ansible-automation-platform-containerized-setup-bundle-*.tar.gz  # AAP bundle (you provide)
+│   └── cac/                    # CaC templates pre-loaded into Controller
+│       ├── controller_organizations.yaml.j2
+│       ├── controller_credentials.yaml.j2
+│       ├── controller_inventories.yaml.j2
+│       ├── controller_projects.yaml.j2
+│       ├── controller_job_templates.yaml.j2
+│       └── inventory_sources.yaml.j2
+└── templates/
+    ├── inventory-growth.j2     # AAP installer inventory template
+    └── aap_precheck_report.j2  # Precheck report template
+```

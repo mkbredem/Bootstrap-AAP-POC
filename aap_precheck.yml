@@ -6,7 +6,7 @@
   vars:
     min_rhel_version: "9.4"
     min_cpu: 4
-    min_mem_mb: 1600
+    min_mem_mb: 16384
     min_mem_seed_mb: 32768
     min_disk_bytes: 64424509440        # 60 GB
     min_install_bytes: 16106127360     # 15 GB

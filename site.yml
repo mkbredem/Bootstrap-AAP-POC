@@ -1,0 +1,15 @@
+---
+# Single entry-point for the full AAP POC bootstrap.
+# Runs precheck, then install prep + installer in sequence.
+# Usage: ansible-playbook -i aap_precheck_inventory site.yml
+#
+# Optional: to skip the precheck if you've already passed it:
+#   ansible-playbook -i aap_precheck_inventory site.yml --skip-tags precheck
+
+- name: Import AAP precheck
+  ansible.builtin.import_playbook: aap_precheck.yml
+  tags: precheck
+
+- name: Import AAP install prep and installer
+  ansible.builtin.import_playbook: aap_install_prep.yml
+  tags: install
