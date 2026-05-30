@@ -2,9 +2,9 @@
 
 ## What This Does
 
-Bootstraps a fully configured **Containerized AAP 2.6 POC** on a single RHEL 9 or RHEL 10 host using the [growth topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#cont-a-env-a) (Controller + Hub + EDA + Gateway, all on one machine).
+Bootstraps a fully configured **Containerized AAP 2.6 POC** on a single RHEL 9 or RHEL 10 host using the [growth topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/plan-ref_cont_a_env_a#cont-a-env-a___infrastructure_topology) (Controller + Hub + EDA + Gateway, all on one machine).
 
-After running, you get a fully licensed AAP instance with these resources pre-loaded and ready to demo:
+After running, you get a fully licensed AAP instance with these resources pre-loaded and ready to consume:
 
 | Resource | Details |
 |----------|---------|
@@ -26,15 +26,24 @@ After running, you get a fully licensed AAP instance with these resources pre-lo
 
 ### Step 1 — Provision a RHEL 9 or RHEL 10 Host
 
-The host must meet the [growth topology hardware requirements](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies#infrastructure_topology):
+The host must meet the [growth topology hardware requirements](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/plan-ref_cont_a_env_a#cont-a-env-a___infrastructure_topology):
 
 - 4+ vCPUs
 - 16 GB RAM (32 GB recommended)
 - 60 GB disk
 
-Configure a **dedicated non-root user** with passwordless sudo on this host (see [prerequisites](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/preparing-containerized-installation#prerequisites)).
+Configure a **dedicated non-root user** with passwordless sudo on this host (see [prerequisites](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/install-proc_preparing_the_managed_nodes_for_containerized_installation)).
 
 ### Step 2 — Get an AAP Trial Subscription and Download the Manifest
+
+0.1 Install ansible-core, git, wget
+
+```bash
+sudo dnf install -y ansible-core git wget
+```
+
+0.2 clone/install this project on the target AAP host and CD into the Bootstrap-AAP-POC directory
+
 
 1. Sign up for an [AAP 60-Day Trial](https://www.redhat.com/en/technologies/management/ansible/trial) (100 managed nodes, no credit card)
 2. Create a [Subscription Allocation](https://access.redhat.com/management/subscription_allocations/new):
