@@ -89,15 +89,19 @@
     ############################################################
     # MEMORY CHECK
     ############################################################
+    - name: Evaluate memory status
+      set_fact:
+        mem_status: "{{ 'PASS' if ansible_memtotal_mb | int >= min_mem_mb | int else 'FAIL' }}"
+
     - name: Check memory
       set_fact:
         precheck_results: "{{ precheck_results + [ result ] }}"
       vars:
         result:
           requirement: "Memory"
-          desired: ">= 16GB (32GB recommended if seeding)"
+          desired: ">= {{ (min_mem_mb | int / 1024) | round | int }}GB (32GB recommended if seeding)"
           observed: "{{ ansible_memtotal_mb }} MB"
-          status: "{{ 'PASS' if ansible_memtotal_mb | int >= min_mem_mb else 'FAIL' }}"
+          status: "{{ mem_status }}"
 
     ############################################################
     # DISK CHECK (TOTAL)

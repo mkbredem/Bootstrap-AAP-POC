@@ -28,7 +28,7 @@ Results:
 {% elif r.requirement == "CPU" %}
     Increase vCPU count to at least {{ min_cpu }}.
 {% elif r.requirement == "Memory" %}
-    Increase memory to at least 16GB (32GB recommended for seeding).
+    Increase memory to at least {{ (min_mem_mb | int / 1024) | round | int }}GB (32GB recommended for seeding).
 {% elif r.requirement == "Total disk" %}
     Increase disk to >= 60GB AND expand OS filesystem:
       sudo growpart /dev/xvda 3
