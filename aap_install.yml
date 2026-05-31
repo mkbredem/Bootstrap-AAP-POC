@@ -28,8 +28,17 @@
           "ansible-playbook -i inventory-growth ansible.containerized_installer.install; exec bash" Enter
         tmux split-window -t {{ tmux_session }} -h -c "{{ aap_setup_dir }}"
         tmux select-pane -t {{ tmux_session }}:0.0
-        tmux attach-session -t {{ tmux_session }} < /dev/tty > /dev/tty 2>&1
+        if (exec < /dev/tty) 2>/dev/null; then
+          tmux attach-session -t {{ tmux_session }} < /dev/tty > /dev/tty 2>&1
+        else
+          echo ""
+          echo "================================================================"
+          echo " Installer is running in tmux session '{{ tmux_session }}'"
+          echo " No TTY available for auto-attach."
+          echo " Run the following to connect:"
+          echo "   tmux attach -t {{ tmux_session }}"
+          echo "================================================================"
+        fi
       become: false
-      # The shell exits cleanly when the user detaches (Ctrl+B D).
-      # The installer keeps running in the background.
+      # Exits cleanly on detach (Ctrl+B D) or prints attach instructions if no TTY.
       changed_when: false
