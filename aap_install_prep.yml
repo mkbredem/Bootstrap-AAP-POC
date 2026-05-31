@@ -226,35 +226,29 @@
     - name: Set final bundle path
       set_fact:
         bundle_final_path: "{{ playbook_dir }}/files/{{ bundle_clean_name }}"
+        bundle_base_name: "{{ bundle_clean_name | regex_replace('\\.tar\\.gz$', '') }}"
 
-    - name: Extract setup bundle to install user home directory
+    - name: Check if this version is already extracted
+      ansible.builtin.stat:
+        path: "/home/{{ install_user }}/{{ bundle_base_name }}"
+      register: extracted_dir_stat
+
+    - name: Extract setup bundle (skipped if this version already exists)
       unarchive:
         src: "{{ bundle_final_path }}"
         dest: "/home/{{ install_user }}/"
         remote_src: true
         owner: "{{ install_user }}"
         group: "{{ install_user }}"
-
-    - name: Find extracted setup directory
-      find:
-        paths: "/home/{{ install_user }}"
-        file_type: directory
-        patterns: "ansible-automation-platform-containerized-*"
-      register: extracted_dir
-
-    - name: Fail if extracted directory not found
-      assert:
-        that:
-          - extracted_dir.files | length > 0
-        fail_msg: "Could not find extracted AAP setup directory under /home/{{ install_user }}/"
+      when: not extracted_dir_stat.stat.exists
 
     - name: Set extracted directory path
       set_fact:
-        aap_setup_dir: "{{ extracted_dir.files[0].path }}"
+        aap_setup_dir: "/home/{{ install_user }}/{{ bundle_base_name }}"
 
     - name: Show extracted directory
       debug:
-        msg: "AAP setup extracted to {{ aap_setup_dir }}"
+        msg: "AAP setup directory: {{ aap_setup_dir }}"
 
     ###################################################################
     # Find and validate manifest zip
