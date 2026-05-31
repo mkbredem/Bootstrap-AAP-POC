@@ -21,24 +21,30 @@
       ignore_errors: true
       changed_when: false
 
-    - name: Create tmux session with split-screen and attach
+    - name: Create tmux split-screen session
       ansible.builtin.shell: |
         tmux new-session -d -s {{ tmux_session }} -c "{{ aap_setup_dir }}"
         tmux send-keys -t {{ tmux_session }} \
           "ansible-playbook -i inventory-growth ansible.containerized_installer.install; exec bash" Enter
         tmux split-window -t {{ tmux_session }} -h -c "{{ aap_setup_dir }}"
         tmux select-pane -t {{ tmux_session }}:0.0
-        if (exec < /dev/tty) 2>/dev/null; then
-          tmux attach-session -t {{ tmux_session }} < /dev/tty > /dev/tty 2>&1
-        else
-          echo ""
-          echo "================================================================"
-          echo " Installer is running in tmux session '{{ tmux_session }}'"
-          echo " No TTY available for auto-attach."
-          echo " Run the following to connect:"
-          echo "   tmux attach -t {{ tmux_session }}"
-          echo "================================================================"
-        fi
       become: false
-      # Exits cleanly on detach (Ctrl+B D) or prints attach instructions if no TTY.
       changed_when: false
+
+    - name: Attach to tmux session
+      ansible.builtin.shell: tmux attach-session -t {{ tmux_session }} < /dev/tty > /dev/tty 2>&1
+      become: false
+      changed_when: false
+      ignore_errors: true
+      register: tmux_attach
+
+    - name: Show manual attach instructions (no TTY available for auto-attach)
+      ansible.builtin.debug:
+        msg:
+          - "================================================================"
+          - " Installer is running in tmux session '{{ tmux_session }}'"
+          - " Run the following command to connect:"
+          - "   tmux attach -t {{ tmux_session }}"
+          - " Ctrl+B D to detach (installer keeps running)"
+          - "================================================================"
+      when: tmux_attach is failed
