@@ -5,8 +5,8 @@
 # Skip precheck on reruns:
 #   ansible-playbook -i aap_precheck_inventory site.yml --skip-tags precheck
 #
-# Relaunch installer session only (re-renders CaC files and runs full idempotent install):
-#   ansible-playbook -i aap_precheck_inventory site.yml --skip-tags precheck,prep
+# Re-render CaC files and relaunch installer only:
+#   ansible-playbook -i aap_precheck_inventory site.yml --tags install
 
 - name: Import AAP precheck
   ansible.builtin.import_playbook: aap_precheck.yml
@@ -16,42 +16,6 @@
   ansible.builtin.import_playbook: aap_install_prep.yml
   tags: prep
 
-
-##############################################
-# Launch AAP installer in a tmux split-screen
-##############################################
-- name: Launch AAP installer in a persistent tmux split-screen session
-  hosts: all
-  become: true
-  gather_facts: false
+- name: Import AAP installer launch
+  ansible.builtin.import_playbook: aap_install.yml
   tags: install
-
-  vars:
-    aap_setup_dir: "{{ hostvars[inventory_hostname].aap_setup_dir_for_install }}"
-    install_user: "{{ hostvars[inventory_hostname].install_user_for_install }}"
-    tmux_session: aap-install
-
-  tasks:
-    - name: Install tmux if missing
-      ansible.builtin.dnf:
-        name: tmux
-        state: present
-
-    - name: Kill any existing tmux session with the same name
-      ansible.builtin.command: tmux kill-session -t {{ tmux_session }}
-      become: false
-      ignore_errors: true
-      changed_when: false
-
-    - name: Create tmux session with split-screen and attach
-      ansible.builtin.shell: |
-        tmux new-session -d -s {{ tmux_session }} -c "{{ aap_setup_dir }}"
-        tmux send-keys -t {{ tmux_session }} \
-          "ansible-playbook -i inventory-growth ansible.containerized_installer.install; exec bash" Enter
-        tmux split-window -t {{ tmux_session }} -h -c "{{ aap_setup_dir }}"
-        tmux select-pane -t {{ tmux_session }}:0.0
-        tmux attach-session -t {{ tmux_session }} < /dev/tty > /dev/tty 2>&1
-      become: false
-      # The shell exits cleanly when the user detaches (Ctrl+B D).
-      # The installer keeps running in the background.
-      changed_when: false
