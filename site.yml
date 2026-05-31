@@ -42,7 +42,7 @@
 
     - name: Kill any existing tmux session with the same name
       ansible.builtin.command: tmux kill-session -t {{ tmux_session }}
-      become_user: "{{ install_user }}"
+      become: false
       ignore_errors: true
       changed_when: false
 
@@ -54,7 +54,7 @@
         tmux split-window -t {{ tmux_session }} -h -c "{{ aap_setup_dir }}"
         tmux select-pane -t {{ tmux_session }}:0.0
         tmux attach-session -t {{ tmux_session }} < /dev/tty > /dev/tty 2>&1
-      become_user: "{{ install_user }}"
+      become: false
       # The shell exits cleanly when the user detaches (Ctrl+B D).
       # The installer keeps running in the background.
       changed_when: false
@@ -107,7 +107,7 @@
 
     - name: Kill any existing seed tmux session
       ansible.builtin.command: tmux kill-session -t {{ tmux_session }}
-      become_user: "{{ install_user }}"
+      become: false
       ignore_errors: true
       changed_when: false
 
@@ -119,5 +119,5 @@
         tmux split-window -t {{ tmux_session }} -h -c "{{ aap_setup_dir }}"
         tmux select-pane -t {{ tmux_session }}:0.0
         tmux attach-session -t {{ tmux_session }} < /dev/tty > /dev/tty 2>&1
-      become_user: "{{ install_user }}"
+      become: false
       changed_when: false
