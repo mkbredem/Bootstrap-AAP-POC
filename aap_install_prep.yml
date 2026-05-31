@@ -81,7 +81,6 @@
         subscription-manager register
         --username={{ rhsm_username }}
         --password={{ rhsm_password }}
-        --auto-attach
         --force
       when:
         - rhsm_status.rc != 0
@@ -370,56 +369,3 @@
       when: not secrets_encrypted
       no_log: true
 
-
-##############################################
-# PLAY 3 - Run the AAP Installer
-##############################################
-- name: Run AAP Containerized Installer
-  hosts: all
-  become: false
-  gather_facts: false
-
-  tasks:
-    - name: Set installer facts from prep play
-      set_fact:
-        aap_setup_dir: "{{ hostvars[inventory_hostname].aap_setup_dir_for_install }}"
-        install_user: "{{ hostvars[inventory_hostname].install_user_for_install }}"
-
-    - name: Run AAP containerized installer
-      ansible.builtin.command:
-        cmd: >
-          ansible-playbook
-          -i inventory-growth
-          ansible.containerized_installer.install
-        chdir: "{{ aap_setup_dir }}"
-      become: false
-      async: 7200
-      poll: 30
-      register: install_result
-
-    - name: Show installer output
-      debug:
-        msg: "{{ install_result.stdout_lines | default([]) }}"
-
-    - name: Fail with installer stderr if install failed
-      fail:
-        msg: "{{ install_result.stderr_lines | default([]) }}"
-      when: install_result.rc is defined and install_result.rc != 0
-
-    - name: Post-install summary
-      ansible.builtin.debug:
-        msg:
-          - "============================================"
-          - " AAP Installation Complete!"
-          - "============================================"
-          - " Access your AAP instance at:"
-          - "   https://{{ hostvars[groups['all'][0]].aap_fqdn }}"
-          - " Username: {{ hostvars[groups['all'][0]].aap_user }}"
-          - " Password: (the value you set in secrets.yml)"
-          - "============================================"
-          - " Pre-loaded Controller Resources:"
-          - "   - Organization: Ansible Product Demos (APD)"
-          - "   - Project: Ansible Product Demos (GitHub)"
-          - "   - Inventory: Demo Inventory + AWS"
-          - "   - Job Template: APD | Single demo setup"
-          - "============================================"

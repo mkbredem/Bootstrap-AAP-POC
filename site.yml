@@ -1,15 +1,66 @@
 ---
 # Single entry-point for the full AAP POC bootstrap.
-# Runs precheck, then install prep + installer in sequence.
 # Usage: ansible-playbook -i aap_precheck_inventory site.yml
 #
-# Optional: to skip the precheck if you've already passed it:
+# Skip the precheck on subsequent runs:
 #   ansible-playbook -i aap_precheck_inventory site.yml --skip-tags precheck
+#
+# Skip precheck + prep (re-launch installer session only):
+#   ansible-playbook -i aap_precheck_inventory site.yml --skip-tags precheck,prep
 
 - name: Import AAP precheck
   ansible.builtin.import_playbook: aap_precheck.yml
   tags: precheck
 
-- name: Import AAP install prep and installer
+- name: Import AAP install prep
   ansible.builtin.import_playbook: aap_install_prep.yml
+  tags: prep
+
+
+##############################################
+# Launch AAP installer in a tmux session
+##############################################
+- name: Launch AAP installer in a persistent tmux session
+  hosts: all
+  become: true
+  gather_facts: false
   tags: install
+
+  vars:
+    aap_setup_dir: "{{ hostvars[inventory_hostname].aap_setup_dir_for_install }}"
+    install_user: "{{ hostvars[inventory_hostname].install_user_for_install }}"
+    tmux_session: aap-install
+
+  tasks:
+    - name: Install tmux if missing
+      ansible.builtin.dnf:
+        name: tmux
+        state: present
+
+    - name: Kill any existing tmux session with the same name
+      ansible.builtin.command: tmux kill-session -t {{ tmux_session }}
+      become_user: "{{ install_user }}"
+      ignore_errors: true
+      changed_when: false
+
+    - name: Launch installer in detached tmux session
+      ansible.builtin.command: >
+        tmux new-session -d -s {{ tmux_session }}
+        -c "{{ aap_setup_dir }}"
+        "ansible-playbook -i inventory-growth ansible.containerized_installer.install; exec bash"
+      become_user: "{{ install_user }}"
+
+    - name: Show how to attach to the session
+      ansible.builtin.debug:
+        msg:
+          - "================================================================"
+          - " AAP installer is running in tmux session '{{ tmux_session }}'"
+          - "================================================================"
+          - " Attach to watch live output:"
+          - "   tmux attach -t {{ tmux_session }}"
+          - ""
+          - " Detach (leave it running in background):  Ctrl+B, then D"
+          - ""
+          - " If the install fails, rerun from inside the session:"
+          - "   ansible-playbook -i inventory-growth ansible.containerized_installer.install"
+          - "================================================================"
