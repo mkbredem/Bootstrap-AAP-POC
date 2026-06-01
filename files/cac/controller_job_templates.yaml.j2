@@ -40,7 +40,22 @@ controller_templates:
     timeout: 0
     custom_virtualenv: ""
     host_config_key: ""
-    survey_enabled: false
+    survey_enabled: true
+    survey_spec:
+      name: ""
+      description: ""
+      spec:
+        - question_name: "Demo Category"
+          variable: "demo"
+          type: "multiplechoice"
+          required: true
+          choices:
+            - linux
+            - windows
+            - cloud
+            - network
+            - openshift
+            - satellite
     become_enabled: false
     diff_mode: false
     webhook_service: ""
