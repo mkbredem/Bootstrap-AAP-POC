@@ -1,4 +1,4 @@
-# Bootstrap-AAP-POC (AAP 2.6)
+# AAP POC Accelerator (AAP 2.6)
 
 ## What This Does
 
@@ -42,7 +42,7 @@ Configure a **dedicated non-root user** with passwordless sudo on this host (see
 sudo dnf install -y ansible-core git wget
 ```
 
-0.2 clone/install this project on the target AAP host and CD into the Bootstrap-AAP-POC directory
+0.2 Clone/install this project on the target AAP host and cd into the project directory
 
 **Option A — clone with git:**
 ```bash
@@ -52,8 +52,8 @@ cd Bootstrap-AAP-POC
 
 **Option B — extract from a downloaded tar archive:**
 ```bash
-tar -xzf Bootstrap-AAP-POC.tar.gz
-cd Bootstrap-AAP-POC
+tar -xzf aap-poc-accelerator.tar.gz
+cd aap-poc-accelerator
 ```
 
 1. Sign up for an [AAP 60-Day Trial](https://www.redhat.com/en/technologies/management/ansible/trial) (100 managed nodes, no credit card)
@@ -95,7 +95,7 @@ rhsm_activation_key: <your-activation-key>
 ### Step 5 — Clone This Repo to the RHEL Host and Run
 
 ```bash
-git clone <this-repo-url>
+git clone https://github.com/mkbredem/Bootstrap-AAP-POC.git
 cd Bootstrap-AAP-POC
 ansible-playbook -i aap_precheck_inventory site.yml
 ```
@@ -150,7 +150,7 @@ To add more pre-loaded resources, drop additional `.yaml.j2` files into `files/c
 ## File Layout
 
 ```
-Bootstrap-AAP-POC/
+aap-poc-accelerator/
 ├── site.yml                    # Single entry-point — run this
 ├── aap_precheck.yml            # Host readiness checks
 ├── aap_install_prep.yml        # Prep + installer (3 plays)
